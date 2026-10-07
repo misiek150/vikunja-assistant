@@ -155,7 +155,44 @@ class Container(containers.DeclarativeContainer):
 
 ---
 
-## 7. Testing & Decoupling
+## 7. Logging (Seq)
+
+* Logs are shipped to Seq. Use the stdlib `logging` module in code and `seqlog` as the Seq handler; configure it once at the application entry point / composition root, never inside domain or service classes.
+* Seq URL and API key come from configuration (`<SEQ_URL>`, `<SEQ_API_KEY>` env vars); never hardcode or log secrets.
+* Get loggers with `logging.getLogger(__name__)` and inject them via `__init__` where a class logs (or register them in the container), so tests can pass a mock or use `caplog`.
+* Use structured logging: named message-template properties rather than f-strings, so Seq can index and query them.
+* Never log tokens, passwords, or full request bodies. Log exceptions with `logger.exception(...)` or `exc_info=True` at boundary layers.
+* Include correlation context (e.g. task or project IDs) as properties.
+
+```python
+import logging
+import seqlog
+
+def configure_logging(seq_url: str, api_key: str | None) -> None:
+    seqlog.log_to_seq(
+        server_url=seq_url,
+        api_key=api_key,
+        level=logging.INFO,
+        batch_size=10,
+        auto_flush_timeout=2,
+        override_root_logger=True,
+    )
+
+class TaskService:
+    def __init__(self, repository: Repository, logger: logging.Logger) -> None:
+        self._repository = repository
+        self._logger = logger
+
+    def complete(self, task_id: int) -> None:
+        self._logger.info("Completing task {task_id}", task_id=task_id)
+```
+
+* Keyword-argument templates (`logger.info("... {x}", x=1)`) only work on loggers created after `seqlog` is configured; create loggers after `configure_logging` runs. Verify this against the installed `seqlog` version.
+* Logging configuration is wired in the container (e.g. a `providers.Resource` that calls `configure_logging`), and tests must not send logs to Seq.
+
+---
+
+## 8. Testing & Decoupling
 
 * Avoid global mutable state, singleton patterns, or direct instantiation of external services inside core logic classes.
 * Unit tests use `pytest`. Prefer unit-testing a class by passing fakes or `MagicMock(spec=AbstractClass)` directly to its constructor. For container-level tests, use `container.<provider>.override(providers.Object(fake))` or `with container.override_providers(...)`.
