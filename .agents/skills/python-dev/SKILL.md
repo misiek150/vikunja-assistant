@@ -17,10 +17,10 @@ When generating or refactoring Python code, adhere strictly to the following sta
 - **Composition over Inheritance:** Prefer composition and interface implementation over multi-level inheritance hierarchies. Keep inheritance depth $\le 2$.
 - **SOLID Principles:**
   - **Single Responsibility (SRP):** Classes should have one reason to change. Separate data structures from business logic and I/O.
-  - **Open/Closed (OCP):** Use abstractions (`Protocol`, `ABC`) so behavior can be extended without modifying existing code.
+  - **Open/Closed (OCP):** Use abstractions (`ABC`) so behavior can be extended without modifying existing code.
   - **Liskov Substitution (LSP):** Subtypes must strictly satisfy parent interfaces and contracts. Use `typing.override`.
   - **Interface Segregation (ISP):** Prefer small, single-purpose interfaces over bloated contracts.
-  - **Dependency Inversion (DIP):** Depend on abstractions (`Protocol`), inject dependencies via `__init__`.
+  - **Dependency Inversion (DIP):** Depend on abstractions (`ABC`), inject dependencies via `__init__` and wire them in the IoC container.
 
 ---
 
@@ -30,19 +30,28 @@ When generating or refactoring Python code, adhere strictly to the following sta
 - **Data Containers:** Use `@dataclass(slots=True, frozen=True)` for immutable value objects or domain entities. Use `Pydantic v2` (`BaseModel`) for schemas requiring input validation or dynamic serialization.
 - **Service/Logic Classes:** Use standard classes with explicit dependency injection. Do not store transient state inside service classes unless necessary.
 
-### Abstractions: Protocols vs. ABCs
-- **Prefer `typing.Protocol` (Structural Subtyping):** Use protocols to define interfaces for duck-typing with full static type checking.
-- **Use `abc.ABC` (Nominal Subtyping):** Reserve abstract base classes only when template method patterns or shared default implementation code are required.
+### Abstractions: ABC + Implementations
+- **Default:** every service/integration is defined as an abstract class (`abc.ABC` with `@abstractmethod`) and one or more concrete implementations that subclass it (use `@override`). Consumers depend only on the abstract class.
+- **Naming:** abstract class `Foo`, implementation `HttpFoo` / `InMemoryFoo`, etc. Keep abstract classes small and single-purpose (ISP).
+- `typing.Protocol` is acceptable only for third-party types we cannot subclass.
 
 ```python
-from typing import Protocol, override
-from dataclasses import dataclass
+from abc import ABC, abstractmethod
+from typing import override
 
-# Good: Clear, narrow Protocol
-class Repository(Protocol):
+class Repository(ABC):
+    @abstractmethod
     def get_by_id(self, item_id: str) -> DomainEntity | None: ...
+
+    @abstractmethod
     def save(self, entity: DomainEntity) -> None: ...
 
+class HttpRepository(Repository):
+    @override
+    def get_by_id(self, item_id: str) -> DomainEntity | None: ...
+
+    @override
+    def save(self, entity: DomainEntity) -> None: ...
 ```
 
 ---
@@ -83,7 +92,7 @@ When creating new modules, structure classes using this layout:
 ```python
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Protocol, override
+from typing import override
 import uuid
 
 # 1. Custom Exceptions
@@ -101,8 +110,9 @@ class OrderItem:
     def total_price(self) -> float:
         return self.unit_price * self.quantity
 
-# 3. Interfaces (Protocols)
-class PaymentProcessor(Protocol):
+# 3. Abstractions (ABC)
+class PaymentProcessor(ABC):
+    @abstractmethod
     def process_payment(self, amount: float) -> bool: ...
 
 # 4. Service Classes (Dependency Injection & Single Responsibility)
@@ -126,8 +136,30 @@ class OrderService:
 
 ---
 
-## 6. Testing & Decoupling
+## 6. IoC Container (dependency-injector)
 
-* All service classes must accept interface dependencies via `__init__` so they can be easily mocked using `unittest.mock.MagicMock` or `pytest` fixtures.
+* Use `dependency-injector` (`DeclarativeContainer`) as the single composition root, e.g. `container.py`. Only the container instantiates implementations.
+* Classes receive abstractions through `__init__`; do not use `@inject`/`Provide[...]` inside domain or service classes.
+* Register providers: `providers.Singleton` for stateless/shared services, `providers.Factory` for per-use objects, `providers.Configuration` for env-based settings (e.g. Vikunja URL and token).
+* Every new abstract class + implementation must be registered in the container.
+* Do not use service locators or global container access from core logic; resolve only at the application entry point.
+
+```python
+from dependency_injector import containers, providers
+
+class Container(containers.DeclarativeContainer):
+    config = providers.Configuration()
+    repository = providers.Singleton(HttpRepository, base_url=config.base_url)
+    service = providers.Factory(OrderService, repository=repository)
+```
+
+---
+
+## 7. Testing & Decoupling
+
 * Avoid global mutable state, singleton patterns, or direct instantiation of external services inside core logic classes.
+* Unit tests use `pytest`. Prefer unit-testing a class by passing fakes or `MagicMock(spec=AbstractClass)` directly to its constructor. For container-level tests, use `container.<provider>.override(providers.Object(fake))` or `with container.override_providers(...)`.
+* **New implementation rule:** every new implementation (class, function module) must be created together with its unit tests in the same change, mirroring the source layout under `tests/`. Cover success paths, edge cases, and error paths.
+* **Change rule:** every change to an existing implementation requires reviewing and updating its unit tests (add tests for new behavior, fix tests for changed behavior, remove obsolete ones).
+* **Validation rule:** after any implementation or test change, run the relevant tests (and the full suite if shared code changed). A task is not complete until they pass; report the result and fix failures rather than skipping or deleting tests.
 
