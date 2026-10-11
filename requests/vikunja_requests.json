@@ -1,0 +1,70 @@
+{
+  "_notes": [
+    "Base URL: <VIKUNJA_BASE_URL>/api/v1, header 'Authorization: Bearer <token>', 'Content-Type: application/json'.",
+    "Verbs: PUT = create, POST = update, DELETE = delete.",
+    "Dates: RFC 3339 / ISO 8601. Vikunja stores and returns timestamps as absolute instants (UTC); send an explicit offset or 'Z'. The server's default timezone (service.timezone, default GMT) and the per-user timezone setting only affect filters, reminders and repeating tasks, not the stored value.",
+    "Task 'labels' in the task body is read-only; labels are attached through separate endpoints. Labels must exist first (create_label).",
+    "Update (POST /tasks/{id}) can reset omitted fields: GET the task first and send the full object."
+  ],
+  "create_label": {
+    "method": "PUT",
+    "path": "/labels",
+    "body": {
+      "title": "screenshot",
+      "hex_color": "e8e8e8"
+    }
+  },
+  "create_task": {
+    "method": "PUT",
+    "path": "/projects/{project_id}/tasks",
+    "body": {
+      "title": "Review quarterly report",
+      "description": "Created from a screenshot by vikunja-assistant.",
+      "due_date": "2026-10-20T14:00:00Z",
+      "priority": 3
+    }
+  },
+  "add_labels_to_task": {
+    "_note": "Replaces ALL labels on the task with the given set.",
+    "method": "POST",
+    "path": "/tasks/{task_id}/labels/bulk",
+    "body": {
+      "labels": [
+        { "id": 1 },
+        { "id": 2 }
+      ]
+    }
+  },
+  "add_single_label_to_task": {
+    "method": "PUT",
+    "path": "/tasks/{task_id}/labels",
+    "body": {
+      "label_id": 1
+    }
+  },
+  "set_task_done": {
+    "_note": "Include current title so it is not reset; ideally send the full GET /tasks/{id} object with done=true.",
+    "method": "POST",
+    "path": "/tasks/{task_id}",
+    "body": {
+      "title": "Review quarterly report",
+      "done": true
+    }
+  },
+  "delete_task": {
+    "method": "DELETE",
+    "path": "/tasks/{task_id}",
+    "body": null
+  },
+  "update_task": {
+    "method": "POST",
+    "path": "/tasks/{task_id}",
+    "body": {
+      "title": "Review quarterly report (updated)",
+      "description": "Updated description.",
+      "due_date": "2026-10-22T09:30:00Z",
+      "priority": 5,
+      "done": false
+    }
+  }
+}
