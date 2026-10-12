@@ -1,6 +1,7 @@
 import base64
 import logging
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import override
 
@@ -12,10 +13,17 @@ from assistant.models import ExtractedTask, Screenshot, ScreenshotExtraction
 
 _log = logging.getLogger(__name__)
 
-_PROMPT = (
-    "Extract actionable tasks from this screenshot. "
-    "Return only tasks that are clearly present; return an empty list if there are none."
-)
+_DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "inso_extractor.md"
+
+
+def load_system_prompt(prompt_path: Path | None = None) -> str:
+    path = prompt_path or _DEFAULT_PROMPT_PATH
+    if path.is_file():
+        return path.read_text(encoding="utf-8")
+    return (
+        "You are an assistant that analyzes screenshots from school and kindergarten apps (such as Inso) "
+        "to extract actionable tasks."
+    )
 
 
 class ScreenshotAnalyzer(ABC):
@@ -24,18 +32,32 @@ class ScreenshotAnalyzer(ABC):
 
 
 class GeminiScreenshotAnalyzer(ScreenshotAnalyzer):
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        system_prompt: str | None = None,
+        prompt_path: Path | None = None,
+    ) -> None:
         self._client = genai.Client(api_key=api_key)
         self._model = model
+        self._system_prompt = system_prompt or load_system_prompt(prompt_path)
 
     @override
     def analyze(self, screenshot: Screenshot) -> ScreenshotExtraction:
         data = base64.b64encode(screenshot.path.read_bytes()).decode("ascii")
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC (%A)")
+        user_prompt = (
+            f"Analyze this screenshot from the Inso school app.\n"
+            f"Reference date (today): {now_str}.\n"
+            f"Extract all actionable tasks according to instructions."
+        )
         try:
             interaction = self._client.interactions.create(
                 model=self._model,
+                system_instruction=self._system_prompt,
                 input=[
-                    {"type": "text", "text": _PROMPT},
+                    {"type": "text", "text": user_prompt},
                     {"type": "image", "data": data, "mime_type": screenshot.mime_type},
                 ],
                 response_format={
@@ -67,9 +89,9 @@ class MockScreenshotAnalyzer(ScreenshotAnalyzer):
         return ScreenshotExtraction(
             tasks=[
                 ExtractedTask(
-                    title=f"Mock task from {screenshot.path.name}",
+                    title=f"🎒 Mock task from {screenshot.path.name}",
                     description="Generated in mock mode.",
-                    priority=3,
+                    labels=["Lizbona", "wyprawka"],
                 )
             ]
         )

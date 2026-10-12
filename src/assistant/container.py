@@ -27,7 +27,11 @@ class Container:
             return MockScreenshotAnalyzer(s.mock_responses_dir)
         if s.gemini_api_key is None:
             raise ConfigurationError("GEMINI_API_KEY is required when MOCK_MODE is off")
-        return GeminiScreenshotAnalyzer(s.gemini_api_key.get_secret_value(), s.gemini_model)
+        return GeminiScreenshotAnalyzer(
+            api_key=s.gemini_api_key.get_secret_value(),
+            model=s.gemini_model,
+            prompt_path=s.prompt_path,
+        )
 
     @cached_property
     def mapper(self) -> TaskMapper:

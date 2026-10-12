@@ -40,7 +40,14 @@ class Pipeline:
                 requests = [self._mapper.to_request(t) for t in extraction.tasks]
                 for req in requests:
                     if dry_run:
-                        _log.info("[dry-run] Would create task: %s", req.title)
+                        _log.info(
+                            "[dry-run] Would create task: %s (due=%s, start=%s, end=%s, labels=%s)",
+                            req.title,
+                            req.due_date,
+                            req.start_date,
+                            req.end_date,
+                            req.labels,
+                        )
                     else:
                         self._vikunja.create_task(req)
                         result.tasks_created += 1

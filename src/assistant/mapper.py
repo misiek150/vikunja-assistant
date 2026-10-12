@@ -11,5 +11,7 @@ class TaskMapper:
             title=task.title.strip(),
             description=task.description,
             due_date=task.due_date,
-            priority=task.priority,
+            start_date=task.start_date,
+            end_date=task.end_date,
+            labels=task.labels,
         )

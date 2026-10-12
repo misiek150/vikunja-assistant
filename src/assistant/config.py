@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.8-flash"
+    prompt_path: Path | None = None
 
     vikunja_base_url: str = "http://localhost:3456"
     vikunja_api_token: SecretStr | None = None
