@@ -63,3 +63,10 @@ class CreatedTask(BaseModel):
 
     id: int
     title: str
+
+
+class VikunjaLabel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: int
+    title: str
