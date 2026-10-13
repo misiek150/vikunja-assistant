@@ -55,6 +55,7 @@ class GeminiScreenshotAnalyzer(ScreenshotAnalyzer):
         try:
             interaction = self._client.interactions.create(
                 model=self._model,
+                store=False,
                 system_instruction=self._system_prompt,
                 input=[
                     {"type": "text", "text": user_prompt},
