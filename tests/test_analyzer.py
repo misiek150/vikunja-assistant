@@ -1,10 +1,39 @@
 import json
+import logging
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from assistant.analyzer import MockScreenshotAnalyzer, load_system_prompt
+from assistant.analyzer import GeminiScreenshotAnalyzer, MockScreenshotAnalyzer, load_system_prompt
 from assistant.models import Screenshot
+
+
+def test_gemini_analyzer_logs_progress(monkeypatch, caplog, tmp_path: Path):
+    class FakeInteractions:
+        def create(self, **kwargs):
+            return SimpleNamespace(output_text='{"tasks": []}')
+
+    class FakeClient:
+        def __init__(self, api_key: str):
+            self.interactions = FakeInteractions()
+
+    monkeypatch.setattr("assistant.analyzer.genai.Client", FakeClient)
+    caplog.set_level(logging.INFO, logger="assistant.analyzer")
+
+    image_path = tmp_path / "notice.png"
+    image_path.write_bytes(b"dummy")
+    analyzer = GeminiScreenshotAnalyzer(api_key="test-key", model="test-model")
+
+    result = analyzer.analyze(Screenshot(path=image_path, mime_type="image/png"))
+
+    assert result.tasks == []
+    assert caplog.messages == [
+        "Preparing screenshot notice.png for Gemini",
+        "Sending screenshot notice.png to Gemini model test-model",
+        "Gemini response received for notice.png; extracting tasks",
+        "Extracted 0 task(s) from notice.png",
+    ]
 
 
 def test_load_system_prompt_from_default_file():

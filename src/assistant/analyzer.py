@@ -45,6 +45,7 @@ class GeminiScreenshotAnalyzer(ScreenshotAnalyzer):
 
     @override
     def analyze(self, screenshot: Screenshot) -> ScreenshotExtraction:
+        _log.info("Preparing screenshot %s for Gemini", screenshot.path.name)
         data = base64.b64encode(screenshot.path.read_bytes()).decode("ascii")
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC (%A)")
         user_prompt = (
@@ -53,6 +54,7 @@ class GeminiScreenshotAnalyzer(ScreenshotAnalyzer):
             f"Extract all actionable tasks according to instructions."
         )
         try:
+            _log.info("Sending screenshot %s to Gemini model %s", screenshot.path.name, self._model)
             interaction = self._client.interactions.create(
                 model=self._model,
                 store=False,
@@ -67,7 +69,10 @@ class GeminiScreenshotAnalyzer(ScreenshotAnalyzer):
                     "schema": ScreenshotExtraction.model_json_schema(),
                 },
             )
-            return ScreenshotExtraction.model_validate_json(interaction.output_text or "")
+            _log.info("Gemini response received for %s; extracting tasks", screenshot.path.name)
+            extraction = ScreenshotExtraction.model_validate_json(interaction.output_text or "")
+            _log.info("Extracted %d task(s) from %s", len(extraction.tasks), screenshot.path.name)
+            return extraction
         except ValidationError as exc:
             raise AnalysisError(f"Invalid Gemini response for {screenshot.path.name}") from exc
         except Exception as exc:
