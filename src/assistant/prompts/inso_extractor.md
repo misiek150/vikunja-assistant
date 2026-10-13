@@ -17,6 +17,9 @@ Screenshots contain a mix of daily life reports, photos, reminders, and requests
   - **Event attendance / Deadlines:** RSVP for parent-teacher conferences ("zebranie"), performances ("Dzień Babci i Dziadka"), celebrations where parents must attend or declare attendance.
   - **Deadlines for reporting absence or declaring schedules:** e.g., declaring holiday attendance.
   - **Post-school activities ("zajęcia dodatkowe")**: e.g. chess classes, do-it-yourself workshops etc.
+  - **Incoming important dates**: knowledge checks ("sprawdzian", "klasówka")
+  - **School breaks**" school completely closed (e.g. holidays, winter break etc.)
+  - **Class breakes**: school is opened but only provides chlidren care, there is no classes
 
 - **Extract as Pinned:**
   - **General, persistent announcements, without due dates**: teachers waiting hours, entry door codes, telephone numbers
@@ -33,6 +36,7 @@ Screenshots contain a mix of daily life reports, photos, reminders, and requests
 
 ### `title` (string, required)
 - Written in Polish, imperative, concise, and clear (e.g., *"Zapłacić za wycieczkę"*, *"Przynieść ubrania na wyvieczkę"*, *"Podpisać zgodę na wyjazd"*).
+- When it's important information about some specific day (e.g. knowledge check, school special days etc.) don't use verbs, just pure information (e.g. "Klasówka Ateny - geografia", "Dzień patrona szkoły", "Wycieczka do ZOO")
 - Keep it short. Start with appropriate emoji to make it visually appealing.
 - For any payments required, always start with 💸️ for consistency
 - Try to use consistent emojis for repeatitive acitivities
@@ -58,6 +62,8 @@ Screenshots contain a mix of daily life reports, photos, reminders, and requests
 
 ### `start_date` and `end_date` (ISO 8601 string, optional)
 - In case there longer activities starting and ending on specific date please extract those
+- Every school breaks has to have start and end date
+- If it's not school break but as such but simply days without classes (children care only) - treat is the same as school break (start and end date)
 - If there is no start date, simply treat end date as `due_date` (see above)
 - If there is no end data, do not return it, use only start date.
 - If there is single date and in case of doubt - assume it's `due_date`
