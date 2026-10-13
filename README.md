@@ -35,16 +35,18 @@ Available options:
 
 ## Local Development & CLI Usage
 
-Run commands with your virtual environment and `PYTHONPATH=src`:
+Create and activate a virtual environment, then install the project from the repository root:
 
 ```bash
-# Optional alias for convenience:
-alias run-assistant="PYTHONPATH=src .venv/bin/python -m assistant"
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -e ".[test]"
 ```
 
 ### 1. List detected screenshots (`read`)
+
 ```bash
-PYTHONPATH=src .venv/bin/python -m assistant read
+python3 -m assistant read
 ```
 
 ### 2. Test extraction & prompt without Vikunja (`analyze`)
@@ -52,32 +54,32 @@ Extracts tasks from an image and prints the JSON without making any Vikunja call
 
 ```bash
 # Using mock mode:
-PYTHONPATH=src MOCK_MODE=true .venv/bin/python -m assistant analyze --file data/screenshots/test.png
+MOCK_MODE=true python3 -m assistant analyze --file data/screenshots/test.png
 
 # Using live Gemini:
-PYTHONPATH=src MOCK_MODE=false GEMINI_API_KEY="your-key" \
-  .venv/bin/python -m assistant analyze --file data/screenshots/test.png
+MOCK_MODE=false GEMINI_API_KEY="your-key" \
+  python3 -m assistant analyze --file data/screenshots/test.png
 ```
 
 ### 3. Test Vikunja request mapping (`map`)
 Analyzes the screenshot and prints the resulting `PUT /projects/{id}/tasks` request payloads:
 
 ```bash
-PYTHONPATH=src MOCK_MODE=true .venv/bin/python -m assistant map --file data/screenshots/test.png
+MOCK_MODE=true python3 -m assistant map --file data/screenshots/test.png
 ```
 
 ### 4. Full pipeline in Dry-Run mode (`run --dry-run`)
 Fetches label IDs from Vikunja (`GET /labels`), resolves label mapping and fallback `???` label, but **skips task creation and file moves**:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m assistant run --dry-run
+python3 -m assistant run --dry-run
 ```
 
 ### 5. Full Live Run (`run`)
 Runs the complete flow: extracts tasks, creates them in Vikunja, attaches labels in bulk, and moves processed screenshots to `processed/`:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m assistant run
+python3 -m assistant run
 ```
 
 ---
@@ -107,10 +109,10 @@ docker run --rm \
 
 ## Running Unit Tests
 
-Run the test suite using pytest:
+Run the test suite with `python3`:
 
 ```bash
-.venv/bin/pytest
+python3 -m pytest
 ```
 
 ---
