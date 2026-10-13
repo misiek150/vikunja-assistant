@@ -57,8 +57,7 @@ Extracts tasks from an image and prints the JSON without making any Vikunja call
 MOCK_MODE=true python3 -m assistant analyze --file data/screenshots/test.png
 
 # Using live Gemini:
-MOCK_MODE=false GEMINI_API_KEY="your-key" \
-  python3 -m assistant analyze --file data/screenshots/test.png
+MOCK_MODE=false python3 -m assistant analyze --file data/screenshots/Screenshot_20261013-222253.png
 ```
 
 ### 3. Test Vikunja request mapping (`map`)
