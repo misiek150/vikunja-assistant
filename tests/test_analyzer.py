@@ -10,8 +10,11 @@ from assistant.models import Screenshot
 
 
 def test_gemini_analyzer_logs_progress(monkeypatch, caplog, tmp_path: Path):
+    request_options: dict[str, object] = {}
+
     class FakeInteractions:
         def create(self, **kwargs):
+            request_options.update(kwargs)
             return SimpleNamespace(output_text='{"tasks": []}')
 
     class FakeClient:
@@ -30,10 +33,11 @@ def test_gemini_analyzer_logs_progress(monkeypatch, caplog, tmp_path: Path):
     assert result.tasks == []
     assert caplog.messages == [
         "Preparing screenshot notice.png for Gemini",
-        "Sending screenshot notice.png to Gemini model test-model",
+        "Sending screenshot notice.png to Gemini model test-model (timeout 120 seconds)",
         "Gemini response received for notice.png; extracting tasks",
         "Extracted 0 task(s) from notice.png",
     ]
+    assert request_options["timeout"] == 120.0
 
 
 def test_load_system_prompt_from_default_file():

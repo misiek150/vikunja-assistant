@@ -3,7 +3,7 @@ import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import override
+from typing import Any, override
 
 from google import genai
 from pydantic import ValidationError
@@ -14,6 +14,15 @@ from assistant.models import ExtractedTask, Screenshot, ScreenshotExtraction
 _log = logging.getLogger(__name__)
 
 _DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "inso_extractor.md"
+_GEMINI_REQUEST_TIMEOUT_SECONDS = 120.0
+
+
+def _strict_schema() -> dict[str, Any]:
+    """Mark every task field required so the model fills each one in a single object."""
+    schema = ScreenshotExtraction.model_json_schema()
+    task = schema["$defs"]["ExtractedTask"]
+    task["required"] = list(task["properties"])
+    return schema
 
 
 def load_system_prompt(prompt_path: Path | None = None) -> str:
@@ -54,11 +63,18 @@ class GeminiScreenshotAnalyzer(ScreenshotAnalyzer):
             f"Extract all actionable tasks according to instructions."
         )
         try:
-            _log.info("Sending screenshot %s to Gemini model %s", screenshot.path.name, self._model)
+            _log.info(
+                "Sending screenshot %s to Gemini model %s (timeout %.0f seconds)",
+                screenshot.path.name,
+                self._model,
+                _GEMINI_REQUEST_TIMEOUT_SECONDS,
+            )
             interaction = self._client.interactions.create(
                 model=self._model,
                 store=False,
+                timeout=_GEMINI_REQUEST_TIMEOUT_SECONDS,
                 system_instruction=self._system_prompt,
+                generation_config={"temperature": 0.2, "seed": 42},
                 input=[
                     {"type": "text", "text": user_prompt},
                     {"type": "image", "data": data, "mime_type": screenshot.mime_type},
@@ -66,7 +82,7 @@ class GeminiScreenshotAnalyzer(ScreenshotAnalyzer):
                 response_format={
                     "type": "text",
                     "mime_type": "application/json",
-                    "schema": ScreenshotExtraction.model_json_schema(),
+                    "schema": _strict_schema(),
                 },
             )
             _log.info("Gemini response received for %s; extracting tasks", screenshot.path.name)
